@@ -40,15 +40,15 @@
 .ur-education__details header p { margin: 0 0 3px; color: var(--amber); font: 800 9px/1 "SFMono-Regular", monospace; letter-spacing: .12em; }
 .ur-education__details h2 { margin: 0; font-size: 22px; line-height: 1; letter-spacing: -.02em; }
 .ur-education__details header > span { padding: 4px 6px; border: 1px solid #715a2e; color: var(--amber); font: 800 8px/1 "SFMono-Regular", monospace; letter-spacing: .08em; white-space: nowrap; }
-.ur-education__branch { margin: 8px 0 12px; color: var(--muted); font-size: 11px; }
-.ur-education__plans { display: grid; gap: 7px; }
-.ur-education__plans article { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 12px; padding: 9px 10px; border: 1px solid var(--line); background: var(--panel); }
-.ur-education__plans article > div { min-width: 0; }
-.ur-education__plans strong, .ur-education__plans span, .ur-education__plans b, .ur-education__plans small { display: block; }
-.ur-education__plans strong { overflow: hidden; font-size: 12px; line-height: 1.25; text-overflow: ellipsis; }
-.ur-education__plans span, .ur-education__plans small { margin-top: 3px; color: var(--muted); font: 700 8px/1.2 "SFMono-Regular", monospace; }
-.ur-education__plans article > div:last-child { text-align: right; }
-.ur-education__plans b { color: var(--amber); font: 800 9px/1 "SFMono-Regular", monospace; text-transform: uppercase; }
+.ur-education__branch { margin: 8px 0 12px; color: var(--muted); font: 700 9px/1.3 "SFMono-Regular", monospace; letter-spacing: .04em; text-transform: uppercase; }
+.ur-education__list { display: grid; gap: 3px; margin: 0; padding: 0; list-style: none; }
+.ur-education__list li { display: grid; grid-template-columns: 22px minmax(0, 1fr) auto; align-items: center; gap: 9px; padding: 6px 9px; border: 1px solid var(--line); background: var(--panel); }
+.ur-education__list li > div { min-width: 0; }
+.ur-education__list em { color: var(--muted); font: 700 9px/1 "SFMono-Regular", monospace; font-style: normal; text-align: right; }
+.ur-education__list strong, .ur-education__list span { display: block; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.ur-education__list strong { font-size: 12px; line-height: 1.2; }
+.ur-education__list span { margin-top: 2px; color: var(--muted); font: 700 8px/1.2 "SFMono-Regular", monospace; }
+.ur-education__list b { color: var(--amber); font: 800 8px/1 "SFMono-Regular", monospace; white-space: nowrap; }
 @container (max-height: 105px) { .ur-education__compact { display: flex; } .ur-education__details { display: none; } }
 @container (max-width: 250px) {
   .ur-education__compact { display: flex; gap: 4px; padding-inline: 4px; }

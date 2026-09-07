@@ -10,14 +10,16 @@
   <div id="root"></div>
   <script type="module">
     import { mount } from "../dist/plugin.js";
+    const students = Array.from({ length: 50 }, (_, index) => ({
+      id: `70${11880 + index}`,
+      name: `Example Student ${index + 1}`,
+      branch: "Example Group - Sydney"
+    }));
     mount(document.querySelector("#root"), { invoke: async () => ({
       status: "ready",
       capturedAt: "2026-09-07T08:02:00.000Z",
-      student: { id: "student-1", name: "Example Student", branch: "Example Branch" },
-      applications: [
-        { id: "app-1", provider: "Example University", status: "Incomplete", course: "Bachelor of Example Studies", updatedAt: "3 Sep 2026" },
-        { id: "app-2", provider: "Sample Institute", status: "New Application", course: "Master of Sample Science", updatedAt: "24 Aug 2026" }
-      ]
+      page: { number: 1, shown: students.length, total: 22514 },
+      students
     }) });
   </script>
 </body>

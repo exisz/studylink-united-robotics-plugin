@@ -18,16 +18,22 @@ function installDom() {
   };
 }
 
+const students = Array.from({ length: 50 }, (_, index) => ({
+  id: `student-${index + 1}`,
+  name: `Example Student ${index + 1}`,
+  branch: "Example Group - Sydney",
+}));
+
 const result = {
   status: "ready",
   capturedAt: "2026-09-07T08:02:00.000Z",
-  student: { id: "student-1", name: "Example Student", branch: "Example Branch" },
-  applications: [{ id: "app-1", provider: "Example University", status: "Incomplete", course: "Example Course", updatedAt: "3 Sep 2026" }],
+  page: { number: 1, shown: students.length, total: 22514 },
+  students,
 };
 
 const settle = () => new Promise((resolve) => setTimeout(resolve, 25));
 
-test("mount renders one student and plan from one backend call", async () => {
+test("mount renders the whole student list from one backend call", async () => {
   const restore = installDom();
   try {
     const { mount } = await import(`../dist/plugin.js?test=${Date.now()}`);
@@ -35,10 +41,14 @@ test("mount renders one student and plan from one backend call", async () => {
     const calls = [];
     const cleanup = mount(root, { invoke: async (method) => { calls.push(method); return result; } });
     await settle();
-    assert.deepEqual(calls, ["education.student.read"]);
-    assert.match(root.textContent, /Example Student/);
-    assert.match(root.textContent, /Example Course/);
-    assert.match(root.textContent, /Incomplete/);
+    assert.deepEqual(calls, ["education.students.read"]);
+    assert.equal(root.querySelectorAll(".ur-education__list li").length, 50);
+    const items = [...root.querySelectorAll(".ur-education__list li strong")].map((node) => node.textContent);
+    assert.equal(items.length, 50);
+    assert.equal(items[0], "Example Student 1");
+    assert.equal(items[49], "Example Student 50");
+    assert.match(root.textContent, /showing 50 of 22514 records/i);
+    assert.match(root.textContent, /50 STUDENTS/);
     assert.match(root.textContent, /read only/i);
     assert.ok(root.querySelector(".ur-education__compact"));
     cleanup();
@@ -47,16 +57,22 @@ test("mount renders one student and plan from one backend call", async () => {
   } finally { restore(); }
 });
 
-test("backend failures remain inside the Education panel", async () => {
+test("invalid and failing responses remain inside the Education panel", async () => {
   const restore = installDom();
   try {
     const { mount } = await import(`../dist/plugin.js?error=${Date.now()}`);
     const root = document.querySelector("#root");
-    const cleanup = mount(root, { invoke: async () => { throw new Error("private details"); } });
+    const failing = mount(root, { invoke: async () => { throw new Error("private details"); } });
     await settle();
-    assert.match(root.textContent, /snapshot unavailable/i);
+    assert.match(root.textContent, /student list unavailable/i);
     assert.doesNotMatch(root.textContent, /private details/i);
-    cleanup();
+    failing();
+
+    const invalid = mount(root, { invoke: async () => ({ ...result, page: { number: 1, shown: 7, total: 22514 } }) });
+    await settle();
+    assert.match(root.textContent, /student list unavailable/i);
+    assert.equal(root.querySelectorAll(".ur-education__list li").length, 0);
+    invalid();
   } finally { restore(); }
 });
 

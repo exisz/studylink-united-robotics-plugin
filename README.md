@@ -1,16 +1,16 @@
 # Education — United Robotics World plugin
 
-A deliberately small, read-only Capital Education panel. It reads one administrator-confirmed student snapshot from the instance-owned frontline state directory and shows the student plus application plans. It never contacts StudyLink directly and performs no write, polling, layout, or storage operation in the browser.
+A deliberately small, read-only Capital Education panel. It reads one administrator-confirmed StudyLink applicant page snapshot from the instance-owned frontline state directory and shows that student list. It never contacts StudyLink directly and performs no write, polling, layout, or storage operation in the browser.
 
 ## Private state contract
 
 The World plugin runtime supplies `WORLD_PLUGIN_STATE_DIR`. This plugin reads only:
 
 ```text
-$WORLD_PLUGIN_STATE_DIR/student.json
+$WORLD_PLUGIN_STATE_DIR/students.json
 ```
 
-The snapshot uses `schemaVersion: 1`, source `studylink-portal-admin-read-only`, one bounded student record, and at most 20 bounded application plans. Missing, malformed, oversized, or symlinked snapshots fail closed. Real student data belongs only in the private instance frontline and must never be committed to this public plugin repository.
+The snapshot uses `schemaVersion: 2`, source `studylink-portal-admin-read-only`, a bounded `page` record (`number`, `shown`, `total`), and between 1 and 50 bounded students (`id`, `name`, `branch` only — no date of birth, email, or nationality). Missing, malformed, oversized, symlinked, or internally inconsistent snapshots fail closed. Real student data belongs only in the private instance frontline and must never be committed to this public plugin repository.
 
 ## Artifact contract
 

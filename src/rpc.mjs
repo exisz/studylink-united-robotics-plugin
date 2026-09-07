@@ -2,10 +2,10 @@ import { lstat, readFile } from "node:fs/promises";
 import path from "node:path";
 
 const VERSION = 1;
-const METHOD = "education.student.read";
+const METHOD = "education.students.read";
 const MAX_REQUEST_BYTES = 16 * 1024;
-const MAX_SNAPSHOT_BYTES = 64 * 1024;
-const MAX_APPLICATIONS = 20;
+const MAX_SNAPSHOT_BYTES = 256 * 1024;
+const MAX_STUDENTS = 50;
 
 class RpcError extends Error {
   constructor(code) {
@@ -17,40 +17,43 @@ class RpcError extends Error {
 const isRecord = (value) => value !== null && typeof value === "object" && !Array.isArray(value);
 const exactKeys = (value, keys) => isRecord(value) && Object.keys(value).sort().join("|") === [...keys].sort().join("|");
 
-function boundedString(value, maximum, required = true) {
-  if (typeof value !== "string" || value.length > maximum || value.includes("\0") || (required && value.trim().length === 0)) {
+function boundedString(value, maximum) {
+  if (typeof value !== "string" || value.length > maximum || value.includes("\0") || value.trim().length === 0) {
     throw new RpcError("snapshot_invalid");
   }
   return value.trim();
 }
 
+function boundedCount(value, maximum) {
+  if (!Number.isSafeInteger(value) || value < 0 || value > maximum) throw new RpcError("snapshot_invalid");
+  return value;
+}
+
 function validateSnapshot(value) {
-  if (!exactKeys(value, ["schemaVersion", "source", "capturedAt", "student", "applications"]) || value.schemaVersion !== 1 || value.source !== "studylink-portal-admin-read-only") {
+  if (!exactKeys(value, ["schemaVersion", "source", "capturedAt", "page", "students"]) || value.schemaVersion !== 2 || value.source !== "studylink-portal-admin-read-only") {
     throw new RpcError("snapshot_invalid");
   }
   if (typeof value.capturedAt !== "string" || !Number.isFinite(Date.parse(value.capturedAt))) throw new RpcError("snapshot_invalid");
-  if (!exactKeys(value.student, ["id", "name", "branch"])) throw new RpcError("snapshot_invalid");
-  const student = {
-    id: boundedString(value.student.id, 128),
-    name: boundedString(value.student.name, 256),
-    branch: boundedString(value.student.branch, 256),
+  if (!exactKeys(value.page, ["number", "shown", "total"])) throw new RpcError("snapshot_invalid");
+  if (!Array.isArray(value.students) || value.students.length === 0 || value.students.length > MAX_STUDENTS) throw new RpcError("snapshot_invalid");
+
+  const page = {
+    number: boundedCount(value.page.number, 1_000_000),
+    shown: boundedCount(value.page.shown, MAX_STUDENTS),
+    total: boundedCount(value.page.total, 100_000_000),
   };
-  if (!Array.isArray(value.applications) || value.applications.length > MAX_APPLICATIONS) throw new RpcError("snapshot_invalid");
+  if (page.number < 1 || page.shown !== value.students.length || page.total < page.shown) throw new RpcError("snapshot_invalid");
+
   const ids = new Set();
-  const applications = value.applications.map((application) => {
-    if (!exactKeys(application, ["id", "provider", "status", "course", "updatedAt"])) throw new RpcError("snapshot_invalid");
-    const id = boundedString(application.id, 128);
+  const students = value.students.map((student) => {
+    if (!exactKeys(student, ["id", "name", "branch"])) throw new RpcError("snapshot_invalid");
+    const id = boundedString(student.id, 128);
     if (ids.has(id)) throw new RpcError("snapshot_invalid");
     ids.add(id);
-    return {
-      id,
-      provider: boundedString(application.provider, 512),
-      status: boundedString(application.status, 128),
-      course: boundedString(application.course, 1024),
-      updatedAt: boundedString(application.updatedAt, 128),
-    };
+    return { id, name: boundedString(student.name, 256), branch: boundedString(student.branch, 256) };
   });
-  return { status: "ready", capturedAt: new Date(value.capturedAt).toISOString(), student, applications };
+
+  return { status: "ready", capturedAt: new Date(value.capturedAt).toISOString(), page, students };
 }
 
 function stateDirectory() {
@@ -60,7 +63,7 @@ function stateDirectory() {
 }
 
 async function readSnapshot() {
-  const file = path.join(stateDirectory(), "student.json");
+  const file = path.join(stateDirectory(), "students.json");
   try {
     const details = await lstat(file);
     if (!details.isFile() || details.isSymbolicLink() || details.size > MAX_SNAPSHOT_BYTES) throw new RpcError("snapshot_invalid");
@@ -85,7 +88,7 @@ async function readRequest() {
     const request = JSON.parse(Buffer.concat(chunks).toString("utf8"));
     if (!isRecord(request) || request.version !== VERSION || typeof request.method !== "string" || !Object.keys(request).every((key) => ["version", "method", "params"].includes(key))) throw new RpcError("invalid_request");
     if (request.method !== METHOD) throw new RpcError("method_not_found");
-    if (request.params !== undefined && (!exactKeys(request.params, []))) throw new RpcError("invalid_request");
+    if (request.params !== undefined && !exactKeys(request.params, [])) throw new RpcError("invalid_request");
     return request;
   } catch (error) {
     if (error instanceof RpcError) throw error;
