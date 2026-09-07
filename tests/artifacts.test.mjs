@@ -18,7 +18,8 @@ test("frontend is self-contained ESM and exports mount", async () => {
   const source = await readFile("dist/plugin.js", "utf8");
   assert.match(source, /export\{[^}]*mount/);
   assert.match(source, /ur-education/);
-  assert.match(source, /Not built yet/);
+  assert.match(source, /education\.student\.read/);
+  assert.match(source, /READ ONLY/);
   assert.doesNotMatch(source, /from\s*["'](?:react|react-dom|\.\/)/);
   assert.doesNotMatch(source, /sourceMappingURL/);
 });

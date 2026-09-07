@@ -1,8 +1,16 @@
 # Education — United Robotics World plugin
 
-The third official World example plugin, following the same lightweight React and one-shot backend contract as Hello World and Todo List.
+A deliberately small, read-only Capital Education panel. It reads one administrator-confirmed student snapshot from the instance-owned frontline state directory and shows the student plus application plans. It never contacts StudyLink directly and performs no write, polling, layout, or storage operation in the browser.
 
-This first step is intentionally a compact placeholder. The panel displays **Education**, **Not built yet**, and **Pending**, including in Capital's smallest persisted panel height. It does not load education data or call its backend.
+## Private state contract
+
+The World plugin runtime supplies `WORLD_PLUGIN_STATE_DIR`. This plugin reads only:
+
+```text
+$WORLD_PLUGIN_STATE_DIR/student.json
+```
+
+The snapshot uses `schemaVersion: 1`, source `studylink-portal-admin-read-only`, one bounded student record, and at most 20 bounded application plans. Missing, malformed, oversized, or symlinked snapshots fail closed. Real student data belongs only in the private instance frontline and must never be committed to this public plugin repository.
 
 ## Artifact contract
 
@@ -14,19 +22,15 @@ dist/plugin.js
 dist/rpc.mjs
 ```
 
-The manifest has the fixed four World V1 fields. `plugin.js` is a self-contained ESM exporting `mount(root, context)`. `rpc.mjs` is a standalone one-shot Node ESM; its placeholder `education.status` response is `{ "status": "pending" }`.
+Pin the manifest through an exact full commit SHA:
+
+```text
+https://cdn.jsdelivr.net/gh/exisz/united-robotics-plugin-studylink@<FULL_SHA>/dist/manifest.json
+```
 
 ## Verify
 
 ```bash
 npm ci
 npm run check
-```
-
-## Immutable installation
-
-Pin all three artifacts through the exact full commit SHA:
-
-```text
-https://cdn.jsdelivr.net/gh/exisz/united-robotics-plugin-studylink@<FULL_40_CHARACTER_GIT_SHA>/dist/manifest.json
 ```

@@ -1,88 +1,59 @@
 .ur-education {
-  --ur-education-ink: #e8ece9;
-  --ur-education-muted: #929d98;
-  --ur-education-deep: #0d1110;
-  --ur-education-line: #36403c;
-  --ur-education-amber: #f2b544;
+  --ink: #e8ece9;
+  --muted: #98a29e;
+  --deep: #0d1110;
+  --panel: #151a18;
+  --line: #36403c;
+  --amber: #f2b544;
   box-sizing: border-box;
   min-width: 0;
   min-height: 100%;
   height: 100%;
-  color: var(--ur-education-ink);
-  background: var(--ur-education-deep);
+  overflow: auto;
+  color: var(--ink);
+  background: var(--deep);
   border: 1px solid #2c3532;
   font-family: "Avenir Next Condensed", "DIN Condensed", "Nimbus Sans Narrow", sans-serif;
-  container-type: inline-size;
+  container-type: size;
 }
-
-.ur-education *,
-.ur-education *::before,
-.ur-education *::after {
-  box-sizing: inherit;
-}
-
-.ur-education .ur-education__placeholder {
-  display: flex;
+.ur-education *, .ur-education *::before, .ur-education *::after { box-sizing: inherit; }
+.ur-education__compact {
+  display: none;
   min-width: 0;
   min-height: 18px;
   height: 100%;
   align-items: center;
-  gap: 14px;
-  padding: 2px 10px;
+  gap: 10px;
+  padding: 2px 8px;
   overflow: hidden;
-  background:
-    linear-gradient(90deg, rgb(242 181 68 / 4%) 1px, transparent 1px) 0 0 / 20px 20px,
-    #151a18;
-  border-left: 3px solid var(--ur-education-amber);
+  border-left: 3px solid var(--amber);
+  background: linear-gradient(90deg, rgb(242 181 68 / 4%) 1px, transparent 1px) 0 0 / 20px 20px, var(--panel);
   white-space: nowrap;
 }
-
-.ur-education .ur-education__placeholder strong {
-  flex: 0 0 auto;
-  font-size: 12px;
-  font-weight: 800;
-  letter-spacing: .04em;
-}
-
-.ur-education .ur-education__placeholder span {
-  min-width: 0;
-  overflow: hidden;
-  color: var(--ur-education-muted);
-  font: 700 9px/1 "SFMono-Regular", "Cascadia Mono", monospace;
-  letter-spacing: .08em;
-  text-overflow: ellipsis;
-  text-transform: uppercase;
-}
-
-.ur-education .ur-education__placeholder b {
-  flex: 0 0 auto;
-  margin-left: auto;
-  padding: 3px 5px;
-  color: #17130a;
-  background: var(--ur-education-amber);
-  font: 800 8px/1 "SFMono-Regular", "Cascadia Mono", monospace;
-  letter-spacing: .08em;
-  text-transform: uppercase;
-}
-
+.ur-education__compact strong { flex: 0 0 auto; overflow: hidden; max-width: 38%; font-size: 11px; text-overflow: ellipsis; }
+.ur-education__compact span { min-width: 0; overflow: hidden; color: var(--muted); font: 700 8px/1 "SFMono-Regular", monospace; letter-spacing: .04em; text-overflow: ellipsis; text-transform: uppercase; }
+.ur-education__compact b { flex: 0 0 auto; margin-left: auto; padding: 3px 5px; color: #17130a; background: var(--amber); font: 800 7px/1 "SFMono-Regular", monospace; letter-spacing: .06em; }
+.ur-education__compact--error { border-left-color: #df735f; }
+.ur-education__compact--error b { color: #fff; background: #8f3d31; }
+.ur-education__details { min-height: 100%; padding: 14px; background: radial-gradient(circle at 85% 0, rgb(242 181 68 / 8%), transparent 36%), var(--deep); }
+.ur-education__details header { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.ur-education__details header p { margin: 0 0 3px; color: var(--amber); font: 800 9px/1 "SFMono-Regular", monospace; letter-spacing: .12em; }
+.ur-education__details h2 { margin: 0; font-size: 22px; line-height: 1; letter-spacing: -.02em; }
+.ur-education__details header > span { padding: 4px 6px; border: 1px solid #715a2e; color: var(--amber); font: 800 8px/1 "SFMono-Regular", monospace; letter-spacing: .08em; white-space: nowrap; }
+.ur-education__branch { margin: 8px 0 12px; color: var(--muted); font-size: 11px; }
+.ur-education__plans { display: grid; gap: 7px; }
+.ur-education__plans article { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 12px; padding: 9px 10px; border: 1px solid var(--line); background: var(--panel); }
+.ur-education__plans article > div { min-width: 0; }
+.ur-education__plans strong, .ur-education__plans span, .ur-education__plans b, .ur-education__plans small { display: block; }
+.ur-education__plans strong { overflow: hidden; font-size: 12px; line-height: 1.25; text-overflow: ellipsis; }
+.ur-education__plans span, .ur-education__plans small { margin-top: 3px; color: var(--muted); font: 700 8px/1.2 "SFMono-Regular", monospace; }
+.ur-education__plans article > div:last-child { text-align: right; }
+.ur-education__plans b { color: var(--amber); font: 800 9px/1 "SFMono-Regular", monospace; text-transform: uppercase; }
+@container (max-height: 105px) { .ur-education__compact { display: flex; } .ur-education__details { display: none; } }
 @container (max-width: 250px) {
-  .ur-education .ur-education__placeholder {
-    gap: 3px;
-    padding-inline: 4px;
-  }
-
-  .ur-education .ur-education__placeholder strong {
-    font-size: 8px;
-  }
-
-  .ur-education .ur-education__placeholder span {
-    font-size: 6px;
-    letter-spacing: .03em;
-  }
-
-  .ur-education .ur-education__placeholder b {
-    padding: 2px 3px;
-    font-size: 6px;
-    letter-spacing: .03em;
-  }
+  .ur-education__compact { display: flex; gap: 4px; padding-inline: 4px; }
+  .ur-education__compact strong { max-width: 35%; font-size: 8px; }
+  .ur-education__compact span { font-size: 6px; }
+  .ur-education__compact b { padding: 2px 3px; font-size: 6px; }
+  .ur-education__details { display: none; }
 }
