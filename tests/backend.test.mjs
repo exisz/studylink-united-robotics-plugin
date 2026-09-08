@@ -51,11 +51,10 @@ test("education.students.read returns the full bounded student page", async () =
   } finally { await rm(directory, { recursive: true, force: true }); }
 });
 
-test("empty, oversized, duplicate, and inconsistent pages fail closed", async () => {
+test("oversized, duplicate, and inconsistent pages fail closed", async () => {
   const directory = await mkdtemp(path.join(tmpdir(), "education-state-"));
   const file = path.join(directory, "students.json");
   const cases = [
-    makeSnapshot(0, { page: { number: 1, shown: 0, total: 10 } }),
     makeSnapshot(51, { page: { number: 1, shown: 51, total: 22514 } }),
     makeSnapshot(2, { students: [{ id: "dup", name: "A", branch: "B" }, { id: "dup", name: "C", branch: "D" }] }),
     makeSnapshot(3, { page: { number: 1, shown: 5, total: 22514 } }),
@@ -98,5 +97,69 @@ test("unknown methods and malformed input return bounded protocol errors", async
     assert.equal(legacy.response.error.code, "method_not_found");
     const malformed = await invoke("not-json", directory);
     assert.equal(malformed.response.error.code, "invalid_request");
+  } finally { await rm(directory, { recursive: true, force: true }); }
+});
+
+function apiSnapshot(n = 50) {
+  return makeSnapshot(n, {
+    schemaVersion: 3,
+    source: "studylink-partner-api-read-only",
+    environment: "preprod",
+    branch: { id: "branch-example", name: "Example Group - Sydney" },
+    page: { number: 1, shown: n, total: null, hasNextPage: true },
+  });
+}
+
+test("API snapshot preserves provenance, unknown total, and genuine empty results", async () => {
+  const directory = await mkdtemp(path.join(tmpdir(), "education-api-"));
+  try {
+    for (const n of [0, 1, 50]) {
+      const snapshot = apiSnapshot(n);
+      snapshot.page.hasNextPage = n === 50;
+      await writeFile(path.join(directory, "students.json"), JSON.stringify(snapshot));
+      const { response, stderr, code } = await invoke({ version: 1, method: "education.students.read" }, directory);
+      assert.equal(code, 0);
+      assert.equal(stderr, "");
+      assert.equal(response.ok, true);
+      assert.equal(response.result.source, snapshot.source);
+      assert.equal(response.result.environment, "preprod");
+      assert.deepEqual(response.result.branch, snapshot.branch);
+      assert.deepEqual(response.result.page, snapshot.page);
+      assert.deepEqual(response.result.students, snapshot.students);
+    }
+    await writeFile(path.join(directory, "students.json"), JSON.stringify(makeSnapshot(0, { page: { number: 1, shown: 0, total: 0 } })));
+    assert.equal((await invoke({ version: 1, method: "education.students.read" }, directory)).response.ok, true);
+  } finally { await rm(directory, { recursive: true, force: true }); }
+});
+
+test("API rejects wrong branch, unknown source, false totals, extra PII, and invalid pagination", async () => {
+  const directory = await mkdtemp(path.join(tmpdir(), "education-api-invalid-"));
+  const mutations = [
+    x => { x.environment = "production"; },
+    x => { x.source = "unverified"; },
+    x => { x.schemaVersion = 2; },
+    x => { x.branch.name = "Another branch"; },
+    x => { x.students[0].branch = "Another branch"; },
+    x => { x.students[0].email = "synthetic@example.test"; },
+    x => { x.page.total = 50; },
+    x => { x.page.total = 22514; },
+    x => { delete x.page.hasNextPage; },
+    x => { x.page.hasNextPage = "true"; },
+    x => { x.page.number = 2; },
+    x => { x.page.shown = 49; },
+    x => { x.students.push(x.students[0]); },
+    x => { x.students[1].id = x.students[0].id; },
+    x => { x.capturedAt = "unknown"; },
+  ];
+  try {
+    for (const mutate of mutations) {
+      const snapshot = apiSnapshot(); mutate(snapshot);
+      await writeFile(path.join(directory, "students.json"), JSON.stringify(snapshot));
+      const { response, stderr } = await invoke({ version: 1, method: "education.students.read" }, directory);
+      assert.equal(response.ok, false);
+      assert.equal(response.error.code, "snapshot_invalid");
+      assert.equal(stderr, "");
+      assert.doesNotMatch(JSON.stringify(response), /Example Student|synthetic@example/);
+    }
   } finally { await rm(directory, { recursive: true, force: true }); }
 });

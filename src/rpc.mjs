@@ -30,19 +30,29 @@ function boundedCount(value, maximum) {
 }
 
 function validateSnapshot(value) {
-  if (!exactKeys(value, ["schemaVersion", "source", "capturedAt", "page", "students"]) || value.schemaVersion !== 2 || value.source !== "studylink-portal-admin-read-only") {
+  const api = value?.schemaVersion === 3 && value?.source === "studylink-partner-api-read-only";
+  const keys = ["schemaVersion", "source", "capturedAt", "page", "students"];
+  if (!exactKeys(value, api ? [...keys, "environment", "branch"] : keys) ||
+      (!api && (value.schemaVersion !== 2 || value.source !== "studylink-portal-admin-read-only"))) {
     throw new RpcError("snapshot_invalid");
   }
   if (typeof value.capturedAt !== "string" || !Number.isFinite(Date.parse(value.capturedAt))) throw new RpcError("snapshot_invalid");
-  if (!exactKeys(value.page, ["number", "shown", "total"])) throw new RpcError("snapshot_invalid");
-  if (!Array.isArray(value.students) || value.students.length === 0 || value.students.length > MAX_STUDENTS) throw new RpcError("snapshot_invalid");
+  if (!exactKeys(value.page, api ? ["number", "shown", "total", "hasNextPage"] : ["number", "shown", "total"])) throw new RpcError("snapshot_invalid");
+  if (!Array.isArray(value.students) || value.students.length > MAX_STUDENTS) throw new RpcError("snapshot_invalid");
 
+  let branch;
+  if (api) {
+    if (value.environment !== "preprod" || !exactKeys(value.branch, ["id", "name"]) ||
+        value.page.total !== null || typeof value.page.hasNextPage !== "boolean" || value.page.number !== 1) throw new RpcError("snapshot_invalid");
+    branch = { id: boundedString(value.branch.id, 128), name: boundedString(value.branch.name, 256) };
+  }
   const page = {
     number: boundedCount(value.page.number, 1_000_000),
     shown: boundedCount(value.page.shown, MAX_STUDENTS),
-    total: boundedCount(value.page.total, 100_000_000),
+    total: api ? null : boundedCount(value.page.total, 100_000_000),
+    ...(api ? { hasNextPage: value.page.hasNextPage } : {}),
   };
-  if (page.number < 1 || page.shown !== value.students.length || page.total < page.shown) throw new RpcError("snapshot_invalid");
+  if (page.number < 1 || page.shown !== value.students.length || (page.total !== null && page.total < page.shown)) throw new RpcError("snapshot_invalid");
 
   const ids = new Set();
   const students = value.students.map((student) => {
@@ -50,10 +60,12 @@ function validateSnapshot(value) {
     const id = boundedString(student.id, 128);
     if (ids.has(id)) throw new RpcError("snapshot_invalid");
     ids.add(id);
-    return { id, name: boundedString(student.name, 256), branch: boundedString(student.branch, 256) };
+    const row = { id, name: boundedString(student.name, 256), branch: boundedString(student.branch, 256) };
+    if (api && row.branch !== branch.name) throw new RpcError("snapshot_invalid");
+    return row;
   });
 
-  return { status: "ready", capturedAt: new Date(value.capturedAt).toISOString(), page, students };
+  return { status: "ready", source: value.source, ...(api ? { environment: value.environment, branch } : {}), capturedAt: new Date(value.capturedAt).toISOString(), page, students };
 }
 
 function stateDirectory() {

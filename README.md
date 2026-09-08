@@ -10,7 +10,9 @@ The World plugin runtime supplies `WORLD_PLUGIN_STATE_DIR`. This plugin reads on
 $WORLD_PLUGIN_STATE_DIR/students.json
 ```
 
-The snapshot uses `schemaVersion: 2`, source `studylink-portal-admin-read-only`, a bounded `page` record (`number`, `shown`, `total`), and between 1 and 50 bounded students (`id`, `name`, `branch` only — no date of birth, email, or nationality). Missing, malformed, oversized, symlinked, or internally inconsistent snapshots fail closed. Real student data belongs only in the private instance frontline and must never be committed to this public plugin repository.
+The reader supports the existing Portal snapshot (`schemaVersion: 2`) and single-page preprod Partner API snapshot (`schemaVersion: 3`), with 0–50 students (`id`, `name`, `branch` only). API snapshots carry source, environment, branch, capture time, and next-page presence; the remote total is unknown, never the returned count. Empty pages render an empty state. This is a captured snapshot, not a live query. Missing, malformed, oversized, symlinked, or inconsistent snapshots fail closed. Real student data must never be committed here.
+
+Scope and delivery evidence: [World Wiki](https://github.com/exisz/united-robotics-world-wiki/blob/main/dev-plans/search-capital-studylink-students-and-view-applications.md).
 
 ## Artifact contract
 

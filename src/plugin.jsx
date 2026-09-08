@@ -22,20 +22,26 @@ function normalize(value) {
   if (!isRecord(value) || value.status !== "ready" || !bounded(value.capturedAt, 64) || !isRecord(value.page) || !Array.isArray(value.students)) {
     throw new Error("invalid_response");
   }
-  if (value.students.length === 0 || value.students.length > MAX_STUDENTS) throw new Error("invalid_response");
-  if (!count(value.page.number, 1000000) || !count(value.page.shown, MAX_STUDENTS) || !count(value.page.total, 100000000)) throw new Error("invalid_response");
-  if (value.page.shown !== value.students.length || value.page.total < value.page.shown) throw new Error("invalid_response");
+  if (value.students.length > MAX_STUDENTS) throw new Error("invalid_response");
+  const api = value.source === "studylink-partner-api-read-only";
+  if (value.source !== undefined && !api && value.source !== "studylink-portal-admin-read-only") throw new Error("invalid_response");
+  if (!Number.isFinite(Date.parse(value.capturedAt)) || !count(value.page.number, 1000000) || value.page.number < 1 || !count(value.page.shown, MAX_STUDENTS)) throw new Error("invalid_response");
+  if (api) {
+    if (value.environment !== "preprod" || !isRecord(value.branch) || !bounded(value.branch.id, 128) || !bounded(value.branch.name, 256) || value.page.number !== 1 || value.page.total !== null || typeof value.page.hasNextPage !== "boolean") throw new Error("invalid_response");
+  } else if (!count(value.page.total, 100000000) || value.page.total < value.page.shown) throw new Error("invalid_response");
+  if (value.page.shown !== value.students.length) throw new Error("invalid_response");
 
   const ids = new Set();
   const students = value.students.map((student) => {
     if (!isRecord(student) || !bounded(student.id, 128) || ids.has(student.id) || !bounded(student.name, 256) || !bounded(student.branch, 256)) {
       throw new Error("invalid_response");
     }
+    if (api && student.branch !== value.branch.name) throw new Error("invalid_response");
     ids.add(student.id);
     return student;
   });
 
-  return { page: value.page, students, capturedAt: value.capturedAt };
+  return { page: value.page, students, capturedAt: value.capturedAt, api, branch: value.branch };
 }
 
 function EducationPanel({ invoke }) {
@@ -58,22 +64,29 @@ function EducationPanel({ invoke }) {
   }
 
   const branches = new Set(view.students.map((student) => student.branch));
-  const branchLabel = branches.size === 1 ? [...branches][0] : `${branches.size} branches`;
+  const branchLabel = view.api ? `${view.branch.name} (#${view.branch.id})` : branches.size === 1 ? [...branches][0] : `${branches.size} branches`;
+  const sourceLabel = view.api ? "Partner API · preprod" : "StudyLink Portal";
+  const pageLabel = view.api
+    ? `returned ${view.page.shown} records (first page, limit 50) · total unknown · ${view.page.hasNextPage ? "next page available, not fetched" : "no next page reported"}`
+    : `showing ${view.page.shown} of ${view.page.total} records (page ${view.page.number})`;
+  const provenance = `${sourceLabel} · Snapshot, not live · Captured ${view.capturedAt} · ${branchLabel} · ${pageLabel}`;
 
   return (
     <section className="ur-education" aria-label="Education plugin">
       <style>{styles}</style>
-      <div className="ur-education__compact" role="status">
+      <div className="ur-education__compact" role="status" title={provenance} aria-label={provenance}>
         <strong>{view.students.length} STUDENTS</strong>
-        <span>{view.students.slice(0, 3).map((student) => student.name).join(" · ")}</span>
-        <b>OF {view.page.total}</b>
+        <span>{view.students.length ? view.students.slice(0, 3).map((student) => student.name).join(" · ") : "No students returned"}</span>
+        <b>{view.api ? "API PREPROD · SNAPSHOT" : `OF ${view.page.total}`}</b>
       </div>
       <div className="ur-education__details">
         <header>
           <div><p>CAPITAL / EDUCATION</p><h2>Students</h2></div>
           <span>READ ONLY</span>
         </header>
-        <p className="ur-education__branch">{branchLabel} · showing {view.page.shown} of {view.page.total} records (page {view.page.number})</p>
+        <p className="ur-education__branch">{sourceLabel} · Snapshot, not live<br />Captured <time dateTime={view.capturedAt}>{view.capturedAt}</time></p>
+        <p className="ur-education__branch">{branchLabel} · {pageLabel}</p>
+        {view.students.length === 0 && <p className="ur-education__branch" role="status">No students returned for this branch.</p>}
         <ol className="ur-education__list">
           {view.students.map((student, index) => (
             <li key={student.id}>

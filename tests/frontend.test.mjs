@@ -82,3 +82,44 @@ test("frontend performs no direct network or polling", async () => {
     assert.equal(source.includes(forbidden), false, forbidden);
   }
 });
+
+test("API UI labels snapshot provenance and unknown total without adding search or details", async () => {
+  const restore = installDom();
+  try {
+    const { mount } = await import(`../dist/plugin.js?api=${Date.now()}`);
+    const root = document.querySelector("#root");
+    for (const n of [0, 50]) {
+      const api = { ...result, source: "studylink-partner-api-read-only", environment: "preprod", branch: { id: "branch-example", name: "Example Group - Sydney" }, students: students.slice(0, n), page: { number: 1, shown: n, total: null, hasNextPage: n === 50 } };
+      let calls = 0;
+      const cleanup = mount(root, { invoke: async () => { calls++; return api; } });
+      await settle();
+      assert.equal(calls, 1);
+      assert.equal(root.querySelectorAll(".ur-education__list li").length, n);
+      assert.match(root.textContent, /Partner API · preprod/);
+      assert.match(root.textContent, /Snapshot, not live/);
+      assert.match(root.textContent, /total unknown/);
+      assert.match(root.textContent, /Example Group - Sydney/);
+      assert.match(root.textContent, /2026-09-07T08:02:00.000Z/);
+      assert.match(root.textContent, n ? /next page available, not fetched/ : /No students returned for this branch/);
+      assert.match(root.querySelector(".ur-education__compact").textContent, /API PREPROD · SNAPSHOT/);
+      assert.equal(root.querySelectorAll("input,button,a").length, 0);
+      assert.doesNotMatch(root.textContent, /22514|production|OF null/);
+      cleanup();
+    }
+  } finally { restore(); }
+});
+
+test("API UI rejects mismatched branch and unsupported environment", async () => {
+  const restore = installDom();
+  try {
+    const { mount } = await import(`../dist/plugin.js?apiError=${Date.now()}`);
+    const root = document.querySelector("#root");
+    const api = { ...result, source: "studylink-partner-api-read-only", environment: "preprod", branch: { id: "branch-example", name: "Example Group - Sydney" }, page: { number: 1, shown: 50, total: null, hasNextPage: true } };
+    for (const bad of [{ ...api, environment: "production" }, { ...api, branch: { id: "other", name: "Other branch" } }]) {
+      const cleanup = mount(root, { invoke: async () => bad }); await settle();
+      assert.match(root.textContent, /Student list unavailable/);
+      assert.equal(root.querySelectorAll(".ur-education__list li").length, 0);
+      cleanup();
+    }
+  } finally { restore(); }
+});
