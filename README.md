@@ -1,4 +1,6 @@
-# Education — United Robotics World plugin
+# StudyLink United Robotics Plugin
+
+> **暂缓**。先读 [项目 DNA](studylink-united-robotics-plugin.dna)。浏览器扩展已独立为 [studylink-browser-plugin](https://github.com/exisz/studylink-browser-plugin)，不属于本仓库。
 
 A deliberately small, read-only Capital Education panel. It reads one administrator-confirmed StudyLink applicant page snapshot from the instance-owned frontline state directory and shows that student list. It never contacts StudyLink directly and performs no write, polling, layout, or storage operation in the browser.
 
@@ -27,7 +29,7 @@ dist/rpc.mjs
 Pin the manifest through an exact full commit SHA:
 
 ```text
-https://cdn.jsdelivr.net/gh/exisz/united-robotics-plugin-studylink@<FULL_SHA>/dist/manifest.json
+https://cdn.jsdelivr.net/gh/exisz/studylink-united-robotics-plugin@<FULL_SHA>/dist/manifest.json
 ```
 
 ## Verify

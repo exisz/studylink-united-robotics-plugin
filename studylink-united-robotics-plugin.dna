@@ -1,0 +1,17 @@
+---
+type: flow
+id: studylink-united-robotics-plugin
+title: StudyLink United Robotics plugin
+status: paused
+summary: >-
+  暂缓。仅保留 StudyLink 在 United Robotics / World / Capital 的插件，不包含浏览器扩展。未获用户明确恢复指令，不开发或部署。浏览器插件属于独立仓库 exisz/studylink-browser-plugin。
+repository: https://github.com/exisz/studylink-united-robotics-plugin
+---
+
+# Full
+
+本项目暂缓，保留现有 World 插件源码与产物。原仓库名 united-robotics-plugin-studylink 已改为 studylink-united-robotics-plugin；不改变运行时 plugin ID、不重新构建或更改现有安装引用。
+
+此仓库不承载 StudyLink 浏览器扩展。浏览器源码及交付 DNA 位于 https://github.com/exisz/studylink-browser-plugin 。旧 World 插件仓库本来不含 extension/，无需删除 World 的 plugin.js 前端；它不是浏览器扩展。
+
+需要继续 World 插件工作时，由用户明确恢复后再核对运行时与交付合同。
