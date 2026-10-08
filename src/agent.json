@@ -1,0 +1,37 @@
+{
+  "schemaVersion": 1,
+  "methods": {
+    "education.students.read": {
+      "description": "Read one page (20) of students from the student service, optionally filtered by a name search.",
+      "params": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "q": {
+            "type": "string",
+            "maxLength": 160
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "education.student.read": {
+      "description": "Read one student's full record by id (from education.students.read).",
+      "params": {
+        "type": "object",
+        "required": [
+          "id"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      }
+    }
+  }
+}

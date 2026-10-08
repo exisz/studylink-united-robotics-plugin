@@ -29,7 +29,8 @@ await build({
 });
 await writeFile("dist/manifest.json", `${JSON.stringify(manifest, null, 2)}\n`);
 await cp("src/rpc.mjs", "dist/rpc.mjs");
+await cp("src/agent.json", "dist/agent.json");
 
-if (JSON.stringify((await readdir("dist")).sort()) !== JSON.stringify(["manifest.json", "plugin.js", "rpc.mjs"])) {
-  throw new Error("dist must contain exactly three artifacts");
+if (JSON.stringify((await readdir("dist")).sort()) !== JSON.stringify(["agent.json", "manifest.json", "plugin.js", "rpc.mjs"])) {
+  throw new Error("dist must contain exactly four artifacts");
 }

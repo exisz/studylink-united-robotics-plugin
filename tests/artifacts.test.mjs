@@ -9,8 +9,8 @@ const expectedManifest = {
   publisher: "United Robotics",
 };
 
-test("dist contains exactly the World V1 three-file artifact contract", async () => {
-  assert.deepEqual((await readdir("dist")).sort(), ["manifest.json", "plugin.js", "rpc.mjs"]);
+test("dist contains exactly the World V1 artifacts plus agent.json", async () => {
+  assert.deepEqual((await readdir("dist")).sort(), ["agent.json", "manifest.json", "plugin.js", "rpc.mjs"]);
   assert.deepEqual(JSON.parse(await readFile("dist/manifest.json", "utf8")), expectedManifest);
 });
 
