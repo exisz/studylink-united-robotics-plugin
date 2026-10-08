@@ -1,5 +1,27 @@
 {
-  "name":"@united-robotics/plugin-studylink","version":"1.0.0","private":true,"type":"module","engines":{"node":">=22"},
-  "scripts":{"clean":"node -e \"import('node:fs/promises').then(({rm})=>rm('dist',{recursive:true,force:true}))\"","build":"node scripts/build.mjs","test":"node --test tests/*.test.mjs","typecheck":"node --check src/rpc.mjs && node --check scripts/build.mjs","lint":"node scripts/lint.mjs","check":"npm run typecheck && npm run lint && npm run build && npm test"},
-  "dependencies":{"react":"19.1.1","react-dom":"19.1.1"},"devDependencies":{"esbuild":"0.25.9","jsdom":"26.1.0"}
+  "name": "@united-robotics/plugin-studylink",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "clean": "node -e \"import('node:fs/promises').then(({rm})=>rm('dist',{recursive:true,force:true}))\"",
+    "build": "node scripts/build.mjs",
+    "test": "node --test tests/*.test.mjs",
+    "typecheck": "node --check src/rpc.mjs && node --check scripts/build.mjs",
+    "lint": "node scripts/lint.mjs",
+    "check": "npm run typecheck && npm run lint && npm run build && npm test"
+  },
+  "dependencies": {
+    "ag-grid-community": "36.2.0",
+    "ag-grid-react": "36.2.0",
+    "react": "19.1.1",
+    "react-dom": "19.1.1"
+  },
+  "devDependencies": {
+    "esbuild": "0.25.9",
+    "jsdom": "26.1.0"
+  }
 }

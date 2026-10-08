@@ -1,115 +1,12 @@
-import React, { useEffect, useState } from "react";
-import { createRoot } from "react-dom/client";
-import { flushSync } from "react-dom";
-import styles from "./plugin.css";
-
-const METHOD = "education.students.read";
-const MAX_STUDENTS = 50;
-
-function isRecord(value) {
-  return value !== null && typeof value === "object" && !Array.isArray(value);
-}
-
-function bounded(value, maximum) {
-  return typeof value === "string" && value.length > 0 && value.length <= maximum && !value.includes("\0");
-}
-
-function count(value, maximum) {
-  return Number.isSafeInteger(value) && value >= 0 && value <= maximum;
-}
-
-function normalize(value) {
-  if (!isRecord(value) || value.status !== "ready" || !bounded(value.capturedAt, 64) || !isRecord(value.page) || !Array.isArray(value.students)) {
-    throw new Error("invalid_response");
-  }
-  if (value.students.length > MAX_STUDENTS) throw new Error("invalid_response");
-  const api = value.source === "studylink-partner-api-read-only";
-  if (value.source !== undefined && !api && value.source !== "studylink-portal-admin-read-only") throw new Error("invalid_response");
-  if (!Number.isFinite(Date.parse(value.capturedAt)) || !count(value.page.number, 1000000) || value.page.number < 1 || !count(value.page.shown, MAX_STUDENTS)) throw new Error("invalid_response");
-  if (api) {
-    if (value.environment !== "preprod" || !isRecord(value.branch) || !bounded(value.branch.id, 128) || !bounded(value.branch.name, 256) || value.page.number !== 1 || value.page.total !== null || typeof value.page.hasNextPage !== "boolean") throw new Error("invalid_response");
-  } else if (!count(value.page.total, 100000000) || value.page.total < value.page.shown) throw new Error("invalid_response");
-  if (value.page.shown !== value.students.length) throw new Error("invalid_response");
-
-  const ids = new Set();
-  const students = value.students.map((student) => {
-    if (!isRecord(student) || !bounded(student.id, 128) || ids.has(student.id) || !bounded(student.name, 256) || !bounded(student.branch, 256)) {
-      throw new Error("invalid_response");
-    }
-    if (api && student.branch !== value.branch.name) throw new Error("invalid_response");
-    ids.add(student.id);
-    return student;
-  });
-
-  return { page: value.page, students, capturedAt: value.capturedAt, api, branch: value.branch };
-}
-
-function EducationPanel({ invoke }) {
-  const [view, setView] = useState({ phase: "loading" });
-
-  useEffect(() => {
-    let active = true;
-    invoke(METHOD)
-      .then((value) => { if (active) setView({ phase: "ready", ...normalize(value) }); })
-      .catch(() => { if (active) setView({ phase: "error" }); });
-    return () => { active = false; };
-  }, [invoke]);
-
-  if (view.phase === "loading") {
-    return <section className="ur-education" aria-label="Education plugin" aria-busy="true"><style>{styles}</style><div className="ur-education__compact"><strong>Education</strong><span>Loading students…</span><b>READ ONLY</b></div></section>;
-  }
-
-  if (view.phase === "error") {
-    return <section className="ur-education" aria-label="Education plugin"><style>{styles}</style><div className="ur-education__compact ur-education__compact--error" role="alert"><strong>Education</strong><span>Student list unavailable</span><b>SAFE</b></div></section>;
-  }
-
-  const branches = new Set(view.students.map((student) => student.branch));
-  const branchLabel = view.api ? `${view.branch.name} (#${view.branch.id})` : branches.size === 1 ? [...branches][0] : `${branches.size} branches`;
-  const sourceLabel = view.api ? "Partner API · preprod" : "StudyLink Portal";
-  const pageLabel = view.api
-    ? `returned ${view.page.shown} records (first page, limit 50) · total unknown · ${view.page.hasNextPage ? "next page available, not fetched" : "no next page reported"}`
-    : `showing ${view.page.shown} of ${view.page.total} records (page ${view.page.number})`;
-  const provenance = `${sourceLabel} · Snapshot, not live · Captured ${view.capturedAt} · ${branchLabel} · ${pageLabel}`;
-
-  return (
-    <section className="ur-education" aria-label="Education plugin">
-      <style>{styles}</style>
-      <div className="ur-education__compact" role="status" title={provenance} aria-label={provenance}>
-        <strong>{view.students.length} STUDENTS</strong>
-        <span>{view.students.length ? view.students.slice(0, 3).map((student) => student.name).join(" · ") : "No students returned"}</span>
-        <b>{view.api ? "API PREPROD · SNAPSHOT" : `OF ${view.page.total}`}</b>
-      </div>
-      <div className="ur-education__details">
-        <header>
-          <div><p>CAPITAL / EDUCATION</p><h2>Students</h2></div>
-          <span>READ ONLY</span>
-        </header>
-        <p className="ur-education__branch">{sourceLabel} · Snapshot, not live<br />Captured <time dateTime={view.capturedAt}>{view.capturedAt}</time></p>
-        <p className="ur-education__branch">{branchLabel} · {pageLabel}</p>
-        {view.students.length === 0 && <p className="ur-education__branch" role="status">No students returned for this branch.</p>}
-        <ol className="ur-education__list">
-          {view.students.map((student, index) => (
-            <li key={student.id}>
-              <em>{index + 1}</em>
-              <div><strong>{student.name}</strong><span>{student.branch}</span></div>
-              <b>#{student.id}</b>
-            </li>
-          ))}
-        </ol>
-      </div>
-    </section>
-  );
-}
-
-export function mount(root, { invoke } = {}) {
-  if (!(root instanceof Element)) throw new TypeError("Education mount root must be an Element.");
-  if (typeof invoke !== "function") throw new TypeError("Education requires an invoke function.");
-  let active = true;
-  const reactRoot = createRoot(root);
-  flushSync(() => reactRoot.render(<EducationPanel invoke={invoke} />));
-  return () => {
-    if (!active) return;
-    active = false;
-    reactRoot.unmount();
-  };
-}
+import React,{useState,useEffect,useRef} from 'react';
+import {createRoot} from 'react-dom/client';
+import {AgGridReact} from 'ag-grid-react';
+import {ModuleRegistry,AllCommunityModule,themeQuartz} from 'ag-grid-community';
+ModuleRegistry.registerModules([AllCommunityModule]);
+export const windows=[{id:'students',title:'学生资料'}];
+function Students({context}){const [rows,setRows]=useState([]),[q,setQ]=useState(''),[query,setQuery]=useState(''),[page,setPage]=useState(1),[total,setTotal]=useState(0),[busy,setBusy]=useState(false),[error,setError]=useState(''),[detail,setDetail]=useState(null),[refresh,setRefresh]=useState(0);const epoch=useRef(0),selection=useRef(0);
+useEffect(()=>{const n=++epoch.current;let active=true;setBusy(true);setError('');setRows([]);context.invoke('education.students.read',{page,q:query}).then(d=>{if(!active||n!==epoch.current)return;if(!d?.ok||!Array.isArray(d.records))throw Error();setRows(d.records);setTotal(d.total);}).catch(()=>{if(active)setError('读取失败：请检查学生服务凭证，未回退旧数据。')}).finally(()=>{if(active)setBusy(false)});return()=>{active=false}},[page,query,refresh]);
+useEffect(()=>()=>{selection.current++},[]);
+async function select(id){const n=++selection.current;setDetail(null);try{const d=await context.invoke('education.student.read',{id});if(n!==selection.current)return;if(!d?.record)throw Error();setDetail(d.record)}catch{if(n===selection.current)setError('所选学生读取失败，请重试')}}
+return <section className="ur-student-library"><h2>学生资料库</h2><p>Word／AI 导入资料 · 与浏览器插件共用一份数据</p><form onSubmit={e=>{e.preventDefault();setPage(1);setQuery(q.trim());setRefresh(x=>x+1)}}><input aria-label="搜索学生姓名或编号" placeholder="姓名或编号" value={q} maxLength={160} onChange={e=>setQ(e.target.value)}/><button disabled={busy}>搜索</button><button type="button" disabled={busy} onClick={()=>setRefresh(x=>x+1)}>刷新</button></form>{error&&<p role="alert">{error}</p>}<p role="status">{busy?'正在读取…':'共 '+total+' 位学生'}</p><div style={{height:350}}><AgGridReact theme={themeQuartz} rowData={rows} columnDefs={[{field:'name',headerName:'学生',flex:2,minWidth:160},{field:'id',headerName:'编号',flex:2,minWidth:150},{field:'updatedAt',headerName:'更新时间',flex:1,minWidth:180}]} defaultColDef={{sortable:false,resizable:true}} getRowId={p=>p.data.id} onRowClicked={e=>select(e.data.id)} onCellKeyDown={e=>{if(e.event.key==='Enter')select(e.data.id)}}/></div><footer><button disabled={busy||page<=1} onClick={()=>setPage(p=>p-1)}>上一页</button><span>第 {page} / {Math.max(1,Math.ceil(total/20))} 页 · 每页20位</span><button disabled={busy||page*20>=total} onClick={()=>setPage(p=>p+1)}>下一页</button></footer>{detail&&<details open><summary>{detail.name} · 版本 {detail.version}</summary><p>完整资料只在选择后读取；此处只读。</p><pre>{JSON.stringify(JSON.parse(detail.raw),null,2)}</pre></details>}</section>}
+export function mount(root,context){if(context.props?.window&&context.props.window!=='students')throw Error('unknown_window');const style=document.createElement('style');style.textContent='.ur-student-library{font:14px system-ui;padding:16px;color:var(--text-primary,#ddd)}.ur-student-library form,.ur-student-library footer{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0;align-items:center}.ur-student-library input{min-width:140px;flex:1}.ur-student-library input,.ur-student-library button{padding:8px;border:1px solid #687585;border-radius:6px}.ur-student-library pre{white-space:pre-wrap;overflow-wrap:anywhere;max-height:350px;overflow:auto}.ur-student-library [role=alert]{color:#e58d75}';root.append(style);const host=document.createElement('div');root.append(host);const app=createRoot(host);app.render(<Students context={context}/>);return()=>{app.unmount();host.remove();style.remove()}}
