@@ -25,3 +25,8 @@ test('missing credentials and unknown methods fail closed',async()=>{
   await assert.rejects(invoke({version:1,method:'education.students.read'},fetch,''),/credential_missing/);
   await assert.rejects(call('shell.exec',{},fetch),/method_not_found/);
 });
+
+test('profile schema accepts the service schema envelope without an ok field', async()=>{
+ const schema={schemaVersion:1,factKinds:[],maxBytes:100000};
+ assert.deepEqual(await call('education.profile.schema',{},async()=>new Response(JSON.stringify(schema))),schema);
+});
