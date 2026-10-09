@@ -28,7 +28,7 @@ await build({
   loader: { ".css": "text" },
 });
 await writeFile("dist/manifest.json", `${JSON.stringify(manifest, null, 2)}\n`);
-await cp("src/rpc.mjs", "dist/rpc.mjs");
+await build({ entryPoints: ["src/rpc.mjs"], outfile: "dist/rpc.mjs", bundle: true, platform: "node", format: "esm", target: "node22", sourcemap: false });
 await cp("src/agent.json", "dist/agent.json");
 
 if (JSON.stringify((await readdir("dist")).sort()) !== JSON.stringify(["agent.json", "manifest.json", "plugin.js", "rpc.mjs"])) {

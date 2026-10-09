@@ -17,9 +17,8 @@ test("dist contains exactly the World V1 artifacts plus agent.json", async () =>
 test("frontend is self-contained ESM and exports mount", async () => {
   const source = await readFile("dist/plugin.js", "utf8");
   assert.match(source, /export\{[^}]*mount/);
-  assert.match(source, /ur-education/);
+  assert.match(source, /ur-student-library/);
   assert.match(source, /education\.students\.read/);
-  assert.match(source, /READ ONLY/);
   assert.doesNotMatch(source, /from\s*["'](?:react|react-dom|\.\/)/);
   assert.doesNotMatch(source, /sourceMappingURL/);
 });

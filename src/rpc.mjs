@@ -1,7 +1,44 @@
-const origin='https://students.yes.rollersoft.com.au';
-async function run(){let raw='';for await(const c of process.stdin){raw+=c;if(Buffer.byteLength(raw)>8192)throw Error('invalid_request');}const r=JSON.parse(raw),p=r.params??{};if(r.version!==1||!p||typeof p!=='object'||Array.isArray(p))throw Error('invalid_request');let path;
-if(r.method==='education.students.read'){if(Object.keys(p).some(k=>!['page','q'].includes(k)))throw Error('invalid_request');const page=p.page??1,q=p.q??'';if(!Number.isSafeInteger(page)||page<1||typeof q!=='string'||q.length>160)throw Error('invalid_request');path='/v1/students?view=summary&pageSize=20&page='+page+'&q='+encodeURIComponent(q);}
-else if(r.method==='education.student.read'){if(Object.keys(p).some(k=>k!=='id')||typeof p.id!=='string'||!/^[A-Za-z0-9][A-Za-z0-9._:-]{0,159}$/.test(p.id))throw Error('invalid_request');path='/v1/students/'+encodeURIComponent(p.id);}
-else throw Error('method_not_found');
-const token=process.env.STUDYLINK_STUDENTS_TOKEN;if(!token)throw Error('credential_missing');const response=await fetch(origin+path,{headers:{Authorization:['Bearer',token].join(' ')},redirect:'error',signal:AbortSignal.timeout(20000)});if(!response.ok)throw Error(response.status===401?'unauthorized':response.status===403?'forbidden':'upstream_failed');const d=await response.json();if(d.ok!==true||(!Array.isArray(d.records)&&!d.record))throw Error('invalid_response');return d;}
-try{console.log(JSON.stringify({version:1,ok:true,result:await run()}))}catch(e){const allowed=['invalid_request','method_not_found','credential_missing','unauthorized','forbidden','upstream_failed','invalid_response'];console.log(JSON.stringify({version:1,ok:false,error:{code:allowed.includes(e.message)?e.message:'read_failed',message:'学生服务读取未确认，请检查配置后重试。'}}));process.exitCode=1;}
+import catalog from './agent.json' with { type: 'json' };
+import { pathToFileURL } from 'node:url';
+const origin = 'https://students.yes.rollersoft.com.au';
+export async function invoke(request, transport = fetch, token = process.env.STUDYLINK_STUDENTS_TOKEN) {
+  const p = request.params ?? {};
+  if (request.version !== 1 || !p || typeof p !== 'object' || Array.isArray(p)) throw Error('invalid_request');
+  const definition = catalog.methods[request.method];
+  if (!definition) throw Error('method_not_found');
+  const schema = definition.params;
+  if (Object.keys(p).some(k => !Object.hasOwn(schema.properties, k)) || (schema.required ?? []).some(k => !Object.hasOwn(p, k))) throw Error('invalid_request');
+  for (const [key, value] of Object.entries(p)) {
+    const s = schema.properties[key];
+    if (s.const !== undefined && value !== s.const || s.type === 'string' && (typeof value !== 'string' || value.length < (s.minLength ?? 0) || value.length > (s.maxLength ?? Infinity) || s.pattern && !new RegExp(s.pattern).test(value)) || s.type === 'integer' && (!Number.isSafeInteger(value) || value < s.minimum) || s.type === 'boolean' && typeof value !== 'boolean') throw Error('invalid_request');
+  }
+  if (!token) throw Error('credential_missing');
+  let path = '/v1/students', method = 'GET', body;
+  if (request.method === 'education.students.read') path += '?view=summary&pageSize=20&page=' + (p.page ?? 1) + '&q=' + encodeURIComponent(p.q ?? '');
+  else if (request.method === 'education.profile.schema') path = '/v1/profile-schema';
+  else if (request.method === 'education.student.create') { method = 'POST'; body = {record:{id:p.id,name:p.name,raw:p.raw}}; }
+  else {
+    path += '/' + encodeURIComponent(p.id);
+    if (request.method === 'education.student.update') { method = 'PATCH'; const {id, confirmed, ...patch} = p; body = patch; }
+    if (request.method === 'education.student.delete') { method = 'DELETE'; body = {expectedVersion:p.expectedVersion}; }
+  }
+  const response = await transport(origin + path, {method, headers:{Authorization:'Bearer ' + token,...(body ? {'content-type':'application/json'} : {}),...(p.idempotencyKey ? {'Idempotency-Key':p.idempotencyKey} : {})}, body:body ? JSON.stringify(body) : undefined, redirect:'error',signal:AbortSignal.timeout(20000)});
+  const data = await response.json();
+  if (!response.ok || data.ok !== true) {
+    const allowed = new Set(['unauthorized','forbidden','version_conflict','student_not_found','student_exists','idempotency_conflict','idempotency_resource_deleted','invalid_data','profile_too_large_or_invalid','custom_definition_not_registered','education_replacement_confirmation_required','course_replacement_confirmation_required']);
+    throw Error(allowed.has(data.error) ? data.error : 'upstream_failed');
+  }
+  return data;
+}
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  try {
+    let raw = '';
+    for await (const chunk of process.stdin) { raw += chunk; if (Buffer.byteLength(raw) > 262144) throw Error('invalid_request'); }
+    let request; try { request = JSON.parse(raw); } catch { throw Error('invalid_request'); }
+    console.log(JSON.stringify({version:1,ok:true,result:await invoke(request)}));
+  } catch (error) {
+    const safe = /^(invalid_request|method_not_found|credential_missing|unauthorized|forbidden|version_conflict|student_not_found|student_exists|idempotency_conflict|idempotency_resource_deleted|invalid_data|profile_too_large_or_invalid|custom_definition_not_registered|education_replacement_confirmation_required|course_replacement_confirmation_required|upstream_failed)$/;
+    console.log(JSON.stringify({version:1,ok:false,error:{code:safe.test(error.message) ? error.message : 'request_failed',message:'学生服务操作未确认；写入失败或超时后先读回，不要盲目重试。'}}));
+    process.exitCode = 1;
+  }
+}
