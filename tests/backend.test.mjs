@@ -27,6 +27,6 @@ test('missing credentials and unknown methods fail closed',async()=>{
 });
 
 test('profile schema accepts the service schema envelope without an ok field', async()=>{
- const schema={schemaVersion:1,factKinds:[],maxBytes:100000};
+ const schema={schemaVersion:1,factKinds:{"contact.email":"text"},maxBytes:100000};
  assert.deepEqual(await call('education.profile.schema',{},async()=>new Response(JSON.stringify(schema))),schema);
 });

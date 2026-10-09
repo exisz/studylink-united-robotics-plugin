@@ -203,7 +203,7 @@ async function invoke(request, transport = fetch, token = process.env.STUDYLINK_
   }
   const response = await transport(origin + path, { method, headers: { Authorization: "Bearer " + token, ...body ? { "content-type": "application/json" } : {}, ...p.idempotencyKey ? { "Idempotency-Key": p.idempotencyKey } : {} }, body: body ? JSON.stringify(body) : void 0, redirect: "error", signal: AbortSignal.timeout(2e4) });
   const data = await response.json();
-  const schemaResponse = request.method === "education.profile.schema" && data.schemaVersion === 1 && Array.isArray(data.factKinds);
+  const schemaResponse = request.method === "education.profile.schema" && data.schemaVersion === 1 && data.factKinds && typeof data.factKinds === "object" && !Array.isArray(data.factKinds);
   if (!response.ok || data.ok !== true && !schemaResponse) {
     const allowed = /* @__PURE__ */ new Set(["unauthorized", "forbidden", "version_conflict", "student_not_found", "student_exists", "idempotency_conflict", "idempotency_resource_deleted", "invalid_data", "profile_too_large_or_invalid", "custom_definition_not_registered", "education_replacement_confirmation_required", "course_replacement_confirmation_required"]);
     throw Error(allowed.has(data.error) ? data.error : "upstream_failed");
