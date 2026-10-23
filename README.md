@@ -28,3 +28,6 @@ https://cdn.jsdelivr.net/gh/exisz/studylink-united-robotics-plugin@<FULL_SHA>/di
 npm ci
 npm run check
 ```
+
+### AI command discovery publication
+Publish all four sibling files: manifest.json, plugin.js, rpc.mjs and agent.json. Missing agent.json returns methods:null and the Connector caches its 404. Use a new immutable commit URL; never overwrite an existing release.
