@@ -6,7 +6,7 @@ function installDom() {
   const dom = new JSDOM("<!doctype html><div id=root></div>", { url: "https://world.test/" });
   const previous = {};
   dom.window.ResizeObserver = class { observe() {} unobserve() {} disconnect() {} };
-  for (const key of ["window", "document", "Element", "HTMLElement", "Node", "navigator", "getComputedStyle", "MutationObserver", "DOMRect", "ShadowRoot", "ResizeObserver", "KeyboardEvent", "MouseEvent"]) {
+  for (const key of ["location", "localStorage", "window", "document", "Element", "HTMLElement", "Node", "navigator", "getComputedStyle", "MutationObserver", "DOMRect", "ShadowRoot", "ResizeObserver", "KeyboardEvent", "MouseEvent"]) {
     previous[key] = Object.getOwnPropertyDescriptor(globalThis, key);
     Object.defineProperty(globalThis, key, { configurable: true, writable: true, value: dom.window[key] });
   }
