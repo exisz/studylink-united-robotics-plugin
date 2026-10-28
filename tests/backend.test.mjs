@@ -30,3 +30,11 @@ test('profile schema accepts the service schema envelope without an ok field', a
  const schema={schemaVersion:1,factKinds:{"contact.email":"text"},maxBytes:100000};
  assert.deepEqual(await call('education.profile.schema',{},async()=>new Response(JSON.stringify(schema))),schema);
 });
+
+test('report methods are exact-student bounded GETs and reject arbitrary parameters',async()=>{
+ for(const [method,params,path]of [['education.reports.read',{id:'synthetic',page:2},'/v1/students/synthetic/completion-reports?page=2'],['education.report.read',{id:'synthetic',reportId:'report-one'},'/v1/students/synthetic/completion-reports/report-one']]){
+ await call(method,params,async(url,o)=>{assert.equal(new URL(url).pathname+new URL(url).search,path);assert.equal(o.method,'GET');assert.equal(o.body,undefined);return method==='education.report.read'?ok({report:{id:params.reportId,profileId:params.id,items:[]}}):ok({reports:[],hasMore:false});});
+ await assert.rejects(call(method,{...params,token:'forbidden'},()=>{throw Error('unexpected_network')}),/invalid_request/);
+ }
+ await assert.rejects(call('education.report.read',{id:'synthetic',reportId:'../escape'},fetch),/invalid_request/);
+});

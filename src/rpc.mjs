@@ -19,6 +19,8 @@ export async function invoke(request, transport = fetch, token = process.env.STU
   else if (request.method === 'education.student.create') { method = 'POST'; body = {record:{id:p.id,name:p.name,raw:p.raw}}; }
   else {
     path += '/' + encodeURIComponent(p.id);
+    if (request.method === 'education.reports.read') path += '/completion-reports?page=' + (p.page ?? 1);
+    if (request.method === 'education.report.read') path += '/completion-reports/' + encodeURIComponent(p.reportId);
     if (request.method === 'education.student.update') { method = 'PATCH'; const {id, confirmed, ...patch} = p; body = patch; }
     if (request.method === 'education.student.delete') { method = 'DELETE'; body = {expectedVersion:p.expectedVersion}; }
   }
@@ -29,6 +31,8 @@ export async function invoke(request, transport = fetch, token = process.env.STU
     const allowed = new Set(['unauthorized','forbidden','version_conflict','student_not_found','student_exists','idempotency_conflict','idempotency_resource_deleted','invalid_data','profile_too_large_or_invalid','custom_definition_not_registered','education_replacement_confirmation_required','course_replacement_confirmation_required']);
     throw Error(allowed.has(data.error) ? data.error : 'upstream_failed');
   }
+  if(request.method==='education.reports.read'&&(!Array.isArray(data.reports)||data.reports.length>20||typeof data.hasMore!=='boolean'))throw Error('upstream_failed');
+  if(request.method==='education.report.read'&&(data.report?.id!==p.reportId||data.report?.profileId!==p.id||!Array.isArray(data.report.items)||data.report.items.length>1000))throw Error('upstream_failed');
   return data;
 }
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
